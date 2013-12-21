@@ -1,0 +1,17 @@
+{
+  "uuid": "7108e876-7600-4fc0-a916-708afe0db44f",
+  "shortName": "CheckX3",
+  "longName": "Check Check Check",
+  "companyName": "MakeAwesomeHappen",
+  "versionCode": 1,
+  "versionLabel": "1.0.0",
+  "watchapp": {
+    "watchface": false
+  },
+  "appKeys": {
+    "dummy": 0
+  },
+  "resources": {
+    "media": []
+  }
+}
