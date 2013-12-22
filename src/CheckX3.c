@@ -9,10 +9,13 @@
  */
 
 #include <pebble.h>
+//#include "ScrollList.h"
 
 static Window* window;
+static ScrollLayer* scroll_layer;
 
 #define LIST_ITEM_LEN 40
+#define LIST_ITEM_HEIGHT 20 // XXX FIXME for font!
 
 struct ListItem {
 	TextLayer* text_layer;
@@ -21,7 +24,7 @@ struct ListItem {
 };
 
 static struct ListItem* list_items;
-static int num_items = 10;
+static int num_items = 15;
 static int highlighted_item = 0;
 
 static void highlight_item(struct ListItem* item, bool highlight)
@@ -49,6 +52,12 @@ static void up_click_handler(ClickRecognizerRef recognizer, void *context) {
 		--highlighted_item;
 		highlight_item(&(list_items[highlighted_item]), true);
 	}
+	// If the newly highlighted item is clipped, scroll up.
+	// The offset will be negative when scrolling up.
+	GRect item_frame = layer_get_frame((const Layer*) list_items[highlighted_item].text_layer);
+	if (item_frame.origin.y + scroll_layer_get_content_offset(scroll_layer).y < LIST_ITEM_HEIGHT) {
+		scroll_layer_scroll_up_click_handler(recognizer, scroll_layer);
+	}
 }
 
 static void down_click_handler(ClickRecognizerRef recognizer, void *context) {
@@ -56,6 +65,11 @@ static void down_click_handler(ClickRecognizerRef recognizer, void *context) {
 		highlight_item(&(list_items[highlighted_item]), false);
 		++highlighted_item;
 		highlight_item(&(list_items[highlighted_item]), true);
+	}
+	// If the newly highlighted item is clipped, scroll down.
+	GRect item_frame = layer_get_frame((const Layer*) list_items[highlighted_item].text_layer);
+	if (item_frame.origin.y + item_frame.size.h > 130) { // XXX near SCREEN_HEIGHT
+		scroll_layer_scroll_down_click_handler(recognizer, scroll_layer);
 	}
 }
 
@@ -68,6 +82,8 @@ static void click_config_provider(void *context) {
 static void window_load(Window *window) {
 	Layer *window_layer = window_get_root_layer(window);
 	GRect bounds = layer_get_bounds(window_layer);
+
+	scroll_layer = scroll_layer_create(bounds);
 
 	int x = 0;
 	int y = 0;
@@ -85,9 +101,14 @@ static void window_load(Window *window) {
 		snprintf(list_items[i].text_buffer, LIST_ITEM_LEN, "Item %d\n", i);
 		text_layer_set_text(list_items[i].text_layer, list_items[i].text_buffer);
 		text_layer_set_text_alignment(list_items[i].text_layer, GTextAlignmentLeft);
-		layer_add_child(window_layer, text_layer_get_layer(list_items[i].text_layer));
+		scroll_layer_add_child(scroll_layer, text_layer_get_layer(list_items[i].text_layer));
 		APP_LOG(APP_LOG_LEVEL_DEBUG, "Added a text layer with text %s", list_items[i].text_buffer);
 	}
+	scroll_layer_set_content_size(scroll_layer, (GSize) { bounds.size.w, y });
+
+	layer_add_child(window_layer, (Layer*) scroll_layer);
+
+//	scroll_layer_set_click_config_onto_window(scroll_layer, window);
 }
 
 static void window_appear(Window* window) {
@@ -100,6 +121,7 @@ static void window_unload(Window *window) {
 	for (int i=0; i < num_items; ++i) {
 		text_layer_destroy(list_items[i].text_layer);
 	}
+	scroll_layer_destroy(scroll_layer);
 }
 
 static void init(void) {
