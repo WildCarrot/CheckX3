@@ -16,3 +16,8 @@
 *.exe
 *.out
 *.app
+
+*~
+.emacs.desktop
+build
+.lock*
